@@ -1,65 +1,100 @@
 from __future__ import annotations
-from typing import Sequence, List, Dict, Optional
+from typing import Sequence, Mapping, List, Dict, Optional, Callable
 
 import os
 import sys
-import subprocess
+from subprocess import Popen, PIPE, STDOUT, CalledProcessError
 from pathlib import Path
+from enum import Enum
+from time import time, sleep
 
-RunError = subprocess.CalledProcessError
+RunError = CalledProcessError
 
 import logging
 
 logger = logging.getLogger(__name__)
 
 
+class RunMode(Enum):
+    NORMAL = 0
+    DEBUGGER = 1
+    PROFILER = 2
+
+
 def run(
-    cmd: Sequence[str | Path],
+    args: Sequence[str | Path],
     cwd: Optional[Path] = None,
-    add_env: Optional[Dict[str, str]] = None,
+    env: Mapping[str, str | Path] = {},
+    *,
     capture: bool = False,
     quiet: bool = False,
     timeout: Optional[float] = None,
+    mode: RunMode = RunMode.NORMAL,
+    alive: Callable[[], bool] = lambda: True,
 ) -> Optional[str]:
-    logger.debug(f"run({cmd}, cwd={cwd})")
-    env = dict(os.environ)
-    if add_env:
-        env.update(add_env)
-        logger.debug(f"additional env: {add_env}")
+    x_args = [str(a) for a in args]
+    if mode == RunMode.DEBUGGER:
+        x_args = ["gdb", "-batch", "-ex", "run", "-ex", "bt", "-args"] + x_args
+    elif mode == RunMode.PROFILER:
+        x_args = ["perf", "record"] + x_args
+    else:
+        assert mode == RunMode.NORMAL
+
+    x_env = {**dict(os.environ), **{k: str(v) for k, v in env.items()}}
 
     stdout = None
     if capture or quiet:
-        stdout = subprocess.PIPE
+        stdout = PIPE
     stderr = None
     if quiet:
-        stderr = subprocess.STDOUT
+        stderr = STDOUT
+
+    logger.debug(f"Starting process: {x_args}, cwd={cwd}, env={env}")
+    done = False
+    proc = Popen(
+        x_args,
+        cwd=cwd,
+        env=x_env,
+        stdout=stdout,
+        stderr=stderr,
+    )
 
     try:
-        ret = subprocess.run(
-            cmd,
-            check=True,
-            cwd=cwd,
-            env=env,
-            stdout=stdout,
-            stderr=stderr,
-            timeout=timeout,
-        )
-    except RunError as e:
+        start = time()
+        while alive():
+            sleep(0.1)
+            ret = proc.poll()
+            if ret is not None:
+                if ret != 0:
+                    raise CalledProcessError(ret, x_args)
+                done = True
+                break
+            if timeout is not None and timeout < time() - start:
+                raise TimeoutError
+    except:
         if capture or quiet:
-            sys.stdout.buffer.write(e.output)
+            assert proc.stdout is not None
+            sys.stdout.buffer.write(proc.stdout.read())
+            assert proc.stderr is not None
+            sys.stderr.buffer.write(proc.stderr.read())
         raise
 
+    if not done:
+        proc.terminate()
+        logger.debug(f"Process terminated: {x_args}")
+
     if capture:
-        return ret.stdout.decode("utf-8")
+        assert proc.stdout is not None
+        return proc.stdout.read().decode("utf-8")
     else:
         return None
 
 
 def capture(
-    cmd: List[str | Path],
+    args: List[str | Path],
     cwd: Optional[Path] = None,
-    add_env: Optional[Dict[str, str]] = None,
+    env: Mapping[str, str] = {},
 ) -> str:
-    result = run(cmd, cwd, add_env=add_env, capture=True)
+    result = run(args, cwd, env=env, capture=True)
     assert result is not None
     return result.strip()

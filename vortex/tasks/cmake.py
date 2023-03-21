@@ -35,7 +35,7 @@ class Cmake(Component):
                 self.src_dir if isinstance(self.src_dir, Path) else ctx.target_path / self.src_dir,
             ],
             cwd=(ctx.target_path / self.build_dir),
-            add_env=self.env(ctx),
+            env=self.env(ctx),
             quiet=ctx.capture,
         )
 

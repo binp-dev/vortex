@@ -6,7 +6,7 @@ from pathlib import Path
 from dataclasses import dataclass, field
 
 from vortex.utils.path import TargetPath
-from vortex.utils.run import run, capture
+from vortex.utils.run import run, capture, RunMode
 from vortex.tasks.base import task, Component, Context
 from vortex.tasks.compiler import Compiler, Gcc, GccCross, GccHost, Target
 from vortex.tasks.process import run as run_with_ctx
@@ -39,7 +39,7 @@ class Rustc(Compiler):
             *([] if not ctx.update else [["rustup", "update", "--force-non-host", f"{self.toolchain}-{self.target}"]]),
         ]
         for cmd in cmds:
-            run(cmd, add_env=self.env(ctx), quiet=ctx.capture)
+            run(cmd, env=self.env(ctx), quiet=ctx.capture)
 
 
 class RustcHost(Rustc):
@@ -74,6 +74,7 @@ class Cargo(Component):
     features: List[str] = field(default_factory=list)
     default_features: bool = True
     release: bool = False
+    run_mode: RunMode = RunMode.NORMAL
 
     def __post_init__(self) -> None:
         self.home_dir = Path.cwd() / ".cargo"
@@ -114,7 +115,7 @@ class Cargo(Component):
             ],
         ]
         for cmd in cmds:
-            run(cmd, cwd=self.src_path(ctx), add_env=self.env(ctx), quiet=ctx.capture)
+            run(cmd, cwd=self.src_path(ctx), env=self.env(ctx), quiet=ctx.capture)
 
     @task
     def test(self, ctx: Context) -> None:
@@ -130,8 +131,9 @@ class Cargo(Component):
                 # "--nocapture",
             ],
             cwd=self.src_path(ctx),
-            add_env=self.env(ctx),
+            env=self.env(ctx),
             quiet=ctx.capture,
+            mode=self.run_mode,
         )
 
     @task
@@ -149,4 +151,5 @@ class Cargo(Component):
             ],
             cwd=self.src_path(ctx),
             env=self.env(ctx),
+            mode=self.run_mode,
         )

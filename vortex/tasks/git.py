@@ -24,7 +24,7 @@ def clone(path: Path, remote: str, branch: Optional[str] = None, clean: bool = F
         run(
             ["git", "clone", remote, path.name],
             cwd=path.parent,
-            add_env={"GIT_TERMINAL_PROMPT": "0"},
+            env={"GIT_TERMINAL_PROMPT": "0"},
             quiet=quiet,
         )
         if branch:
