@@ -166,10 +166,7 @@ def _make_context_from_args(args: argparse.Namespace, target_dir: Path) -> Conte
     else:
         device = None
 
-    if args.log_level is not None:
-        log_level = LogLevel(args.log_level)
-    else:
-        log_level = LogLevel.INFO if args.no_capture else LogLevel.WARNING
+    log_level = LogLevel(args.log_level) if args.log_level is not None else LogLevel.WARNING
 
     return Context(
         target_dir,
