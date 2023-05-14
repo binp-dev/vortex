@@ -153,6 +153,7 @@ class EpicsBaseCross(AbstractEpicsBase):
             [
                 ("^(\\s*GNU_TARGET\\s*=).*$", f"\\1 {str(cc.target)}"),
                 ("^(\\s*GNU_DIR\\s*=).*$", f"\\1 {ctx.target_path / cc.path}"),
+                ("^(\\s*SHARED_LIBRARIES\\s*=).*$", f"\\1 YES"),
             ],
             ctx.target_path / self.build_dir / f"configure/os/CONFIG_SITE.{host_arch}.{cross_arch}",
         )
