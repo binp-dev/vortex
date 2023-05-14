@@ -4,7 +4,7 @@ from typing import List
 import shutil
 from pathlib import Path, PurePosixPath
 
-from vortex.utils.path import TargetPath
+from vortex.utils.path import TargetPath, prepend_if_target
 from vortex.utils.run import capture, run
 from vortex.tasks.base import task, Component, Context
 from vortex.tasks.compiler import Target, Gcc
@@ -20,15 +20,7 @@ def epics_host_arch(epics_base_dir: Path) -> str:
 
 
 def epics_arch_by_target(target: Target) -> str:
-    if target.api == "linux":
-        if target.isa == "x86_64":
-            return "linux-x86_64"
-        elif target.isa == "arm":
-            return "linux-arm"
-        elif target.isa == "aarch64":
-            return "linux-aarch64"
-    # TODO: Add some other archs
-    raise Exception(f"Unknown target for EPICS: {str(target)}")
+    return f"{target.api}-{target.isa}"
 
 
 class EpicsProject(Component):
@@ -61,7 +53,7 @@ class EpicsProject(Component):
 
     def _dep_paths(self, ctx: Context) -> List[Path]:
         "Dependent paths."
-        return [ctx.target_path / self.src_dir]
+        return [prepend_if_target(ctx.target_path, self.src_dir)]
 
     @task
     def build(self, ctx: Context, clean: bool = False) -> None:
@@ -81,8 +73,11 @@ class EpicsProject(Component):
 
         self._prepare_source(ctx)
 
+        print(f"src = {prepend_if_target(ctx.target_path, self.src_dir)}")
+        print(f"dst = {build_path}")
+
         shutil.copytree(
-            ctx.target_path / self.src_dir,
+            prepend_if_target(ctx.target_path, self.src_dir),
             build_path,
             dirs_exist_ok=True,
             ignore=shutil.ignore_patterns(".git"),
@@ -100,28 +95,6 @@ class EpicsProject(Component):
 
         TreeModInfo(build_path).store()
 
-    def _install(self, ctx: Context) -> None:
-        raise NotImplementedError()
-
-    @task
-    def install(self, ctx: Context) -> None:
-        self.build(ctx)
-
-        build_path = ctx.target_path / self.build_dir
-        install_path = ctx.target_path / self.install_dir
-
-        info = TreeModInfo.load(install_path)
-        if info is not None and info.newer_than(build_path):
-            logger.info(f"'{install_path}' is already installed")
-            return
-
-        logger.info(f"Install from {build_path} to {install_path}")
-        shutil.rmtree(install_path, ignore_errors=True)
-        install_path.mkdir()
-        self._install(ctx)
-
-        TreeModInfo(install_path).store()
-
     def _pre_deploy(self, ctx: Context) -> None:
         pass
 
@@ -130,7 +103,7 @@ class EpicsProject(Component):
 
     @task
     def deploy(self, ctx: Context) -> None:
-        self.install(ctx)
+        self.build(ctx)
 
         install_path = ctx.target_path / self.install_dir
         assert ctx.device is not None

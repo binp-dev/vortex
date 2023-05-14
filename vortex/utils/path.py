@@ -53,6 +53,13 @@ class TargetPath:
         return [TargetPath(p) for p in self._inner.parents]
 
 
+def prepend_if_target(target: Path, path: Path | TargetPath) -> Path:
+    if isinstance(path, TargetPath):
+        return target / path
+    else:
+        return path
+
+
 def _test(path: PathLike) -> None:
     pass
 

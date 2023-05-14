@@ -34,14 +34,3 @@ def substitute(
             file.write(new_data)
     else:
         logger.debug(f"file unchanged '{dst}'")
-
-
-def _inverse_ignore_patterns(ignore_patterns: Callable[[str, List[str]], Set[str]]) -> Callable[[str, List[str]], Set[str]]:
-    def allow_patterns(path: str, names: List[str]) -> Set[str]:
-        return set(names) - set(ignore_patterns(path, names))
-
-    return allow_patterns
-
-
-def allow_patterns(*patterns: str) -> Callable[[str, List[str]], Set[str]]:
-    return _inverse_ignore_patterns(shutil.ignore_patterns(*patterns))

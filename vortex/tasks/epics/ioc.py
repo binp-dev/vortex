@@ -32,7 +32,7 @@ class AbstractIoc(EpicsProject):
         build_path = ctx.target_path / self.build_dir
         install_path = ctx.target_path / self.install_dir
         substitute(
-            [("^\\s*#*(\\s*EPICS_BASE\\s*=).*$", f"\\1 {ctx.target_path / self.epics_base.build_dir}")],
+            [("^\\s*#*(\\s*EPICS_BASE\\s*=).*$", f"\\1 {ctx.target_path / self.epics_base.install_dir}")],
             build_path / "configure/RELEASE",
         )
         substitute(
@@ -41,12 +41,7 @@ class AbstractIoc(EpicsProject):
         )
         install_path.mkdir(exist_ok=True)
 
-    @task
-    def build(self, ctx: Context) -> None:
-        self.epics_base.build(ctx)
-        super().build(ctx, clean=True)
-
-    def _install(self, ctx: Context) -> None:
+    def _post_install(self, ctx: Context) -> None:
         shutil.rmtree(
             ctx.target_path / self.install_dir / "iocBoot",
             ignore_errors=True,
@@ -59,10 +54,10 @@ class AbstractIoc(EpicsProject):
         )
 
     @task
-    def install(self, ctx: Context) -> None:
-        self.epics_base.install(ctx)
-        self.build(ctx)
-        self._install(ctx)
+    def build(self, ctx: Context) -> None:
+        self.epics_base.build(ctx)
+        super().build(ctx, clean=True)
+        self._post_install(ctx)
 
     @task
     def deploy(self, ctx: Context) -> None:
@@ -80,7 +75,7 @@ class IocHost(AbstractIoc):
 
     @task
     def run(self, ctx: Context, addr_list: List[str] = []) -> None:
-        self.install(ctx)
+        self.build(ctx)
 
         name = self.name
         epics_base_dir = ctx.target_path / self.epics_base.install_dir
