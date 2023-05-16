@@ -4,7 +4,7 @@ from typing import Dict, List, Optional
 from pathlib import Path
 from dataclasses import dataclass
 
-from vortex.utils.path import TargetPath
+from vortex.utils.path import TargetPath, prepend_if_target
 from vortex.utils.run import run
 from vortex.tasks.base import task, Component, Context
 from vortex.tasks.compiler import Gcc
@@ -26,13 +26,14 @@ class Cmake(Component):
     def opt(self, ctx: Context) -> List[str]:
         return []
 
+    @task
     def configure(self, ctx: Context) -> None:
         self.create_build_dir(ctx)
         run(
             [
                 "cmake",
                 *self.opt(ctx),
-                self.src_dir if isinstance(self.src_dir, Path) else ctx.target_path / self.src_dir,
+                prepend_if_target(ctx.target_path, self.src_dir),
             ],
             cwd=(ctx.target_path / self.build_dir),
             env=self.env(ctx),

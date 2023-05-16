@@ -3,7 +3,6 @@ from typing import List, Any
 
 import shutil
 import re
-import time
 from pathlib import Path, PurePosixPath
 
 from vortex.utils.path import TargetPath
@@ -12,7 +11,6 @@ from vortex.tasks.base import task, Context
 from vortex.tasks.epics.base import EpicsProject
 from vortex.tasks.epics.epics_base import AbstractEpicsBase, EpicsBaseCross, EpicsBaseHost
 from vortex.tasks.process import run
-from vortex.utils.epics.remote_ioc import IocRemoteRunner
 
 
 class AbstractIoc(EpicsProject):
@@ -129,23 +127,3 @@ class IocCross(AbstractIoc):
             text = re.sub(r'(epicsEnvSet\("TOP",)[^\n]+', f'\\1"{self.deploy_path}")', text)
             text = re.sub(r'(epicsEnvSet\("EPICS_BASE",)[^\n]+', f'\\1"{self.epics_deploy_path}")', text)
             ctx.device.store_mem(text, self.deploy_path / "iocBoot" / ioc_name / "envPaths")
-
-    @task
-    def run(self, ctx: Context, addr_list: List[str] = []) -> None:
-        self.deploy(ctx)
-        assert len(addr_list) == 0
-
-        assert ctx.device is not None
-        assert isinstance(self.epics_base, EpicsBaseCross)
-        with IocRemoteRunner(
-            ctx.device,
-            self.name,
-            self.deploy_path,
-            self.epics_base.deploy_path,
-            self.epics_base.arch,
-        ):
-            try:
-                while ctx._running:
-                    time.sleep(1)
-            except KeyboardInterrupt:
-                pass
