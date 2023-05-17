@@ -56,7 +56,14 @@ class SshDevice(Device):
 
         self.user = user
 
-    def store(self, src: Path, dst: PurePosixPath, recursive: bool = False, exclude: List[str] = []) -> None:
+    def store(
+        self,
+        src: Path,
+        dst: PurePosixPath,
+        recursive: bool = False,
+        exclude: List[str] = [],
+        include: List[str] = [],
+    ) -> None:
         if not recursive:
             assert len(exclude) == 0, "'exclude' is not supported"
             run(["bash", "-c", f"test -f {src} && cat {src} | ssh -p {self.port} {self.user}@{self.host} 'cat > {dst}'"])
@@ -65,7 +72,8 @@ class SshDevice(Device):
                 [
                     "rsync",
                     "-rlpt",
-                    *["--exclude=" + mask.replace("*", "**") for mask in exclude],
+                    *["--include=" + mask for mask in include],
+                    *["--exclude=" + mask for mask in exclude],
                     "--progress",
                     "--rsh",
                     f"ssh -p {self.port}",

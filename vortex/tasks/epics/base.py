@@ -30,7 +30,6 @@ class EpicsProject(Component):
         target_dir: TargetPath,
         cc: Gcc,
         deploy_path: PurePosixPath,
-        blacklist: List[str] = [],
     ) -> None:
         super().__init__()
         target_name = cc.name
@@ -39,7 +38,6 @@ class EpicsProject(Component):
         self.install_dir = target_dir / target_name / "install"
         self.cc = cc
         self.deploy_path = deploy_path
-        self.blacklist = blacklist
 
     @property
     def arch(self) -> str:
@@ -101,6 +99,14 @@ class EpicsProject(Component):
     def _post_deploy(self, ctx: Context) -> None:
         pass
 
+    @property
+    def deploy_blacklist(self) -> List[str]:
+        return []
+
+    @property
+    def deploy_whitelist(self) -> List[str]:
+        return []
+
     @task
     def deploy(self, ctx: Context) -> None:
         self.build(ctx)
@@ -109,5 +115,11 @@ class EpicsProject(Component):
         assert ctx.device is not None
         self._pre_deploy(ctx)
         logger.info(f"Deploy {install_path} to {ctx.device.name()}:{self.deploy_path}")
-        ctx.device.store(install_path, self.deploy_path, recursive=True, exclude=self.blacklist)
+        ctx.device.store(
+            install_path,
+            self.deploy_path,
+            recursive=True,
+            exclude=self.deploy_blacklist,
+            include=self.deploy_whitelist,
+        )
         self._post_deploy(ctx)

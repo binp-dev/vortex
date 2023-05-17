@@ -42,7 +42,14 @@ class EpicsRepo(RepoList, EpicsSource):
 
 
 class AbstractEpicsBase(EpicsProject):
-    def __init__(self, source: EpicsSource, target_dir: TargetPath, cc: Gcc) -> None:
+    def __init__(
+        self,
+        source: EpicsSource,
+        target_dir: TargetPath,
+        cc: Gcc,
+        blacklist: List[str] = [],
+        whitelist: List[str] = [],
+    ) -> None:
         self.source = source
         super().__init__(
             self.source.src_dir,
@@ -84,6 +91,16 @@ class AbstractEpicsBase(EpicsProject):
         self.source.clone(ctx)
         super().build(ctx, clean=False)
 
+    @property
+    def deploy_blacklist(self) -> List[str]:
+        return [
+            *super().deploy_blacklist,
+            "**.a",
+            "/include",
+            "/html",
+            "/templates",
+        ]
+
     @task
     def deploy(self, ctx: Context) -> None:
         self.build(ctx)
@@ -121,3 +138,19 @@ class EpicsBaseCross(AbstractEpicsBase):
             ],
             ctx.target_path / self.build_dir / f"configure/os/CONFIG_SITE.{host_arch}.{cross_arch}",
         )
+
+    @property
+    def deploy_blacklist(self) -> List[str]:
+        return [
+            *super().deploy_blacklist,
+            "/bin/*",
+            "/lib/*",
+        ]
+
+    @property
+    def deploy_whitelist(self) -> List[str]:
+        return [
+            *super().deploy_whitelist,
+            f"/bin/{self.arch}",
+            f"/lib/{self.arch}",
+        ]
