@@ -95,8 +95,8 @@ class AbstractEpicsBase(EpicsProject):
     def deploy_blacklist(self) -> List[str]:
         return [
             *super().deploy_blacklist,
-            "**.a",
-            "/include",
+            # "**.a",
+            # "/include",
             "/html",
             "/templates",
         ]
