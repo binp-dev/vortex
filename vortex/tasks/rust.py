@@ -80,7 +80,7 @@ class Cargo(Component):
         self.home_dir = Path.cwd() / ".cargo"
 
     def log_env(self, ctx: Context) -> Dict[str, str]:
-        return {"RUST_LOG": ctx.log_level.name()}
+        return {"RUST_LOG": ctx.log_level.level_name()}
 
     def env(self, ctx: Context) -> Dict[str, str]:
         return {

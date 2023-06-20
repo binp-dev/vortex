@@ -58,15 +58,3 @@ class Cmake(Component):
             cwd=(ctx.target_path / self.build_dir),
             quiet=ctx.capture,
         )
-
-
-@dataclass
-class CmakeRunnable(Cmake):
-    @task
-    def run(self, ctx: Context) -> None:
-        self.build(ctx)
-        run(
-            [f"./{self.build_target}"],
-            cwd=(ctx.target_path / self.build_dir),
-            quiet=ctx.capture,
-        )

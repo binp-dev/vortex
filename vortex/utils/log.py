@@ -20,7 +20,7 @@ class LogLevel(IntEnum):
             logging.ERROR,
         ][int(self)]
 
-    def name(self) -> str:
+    def level_name(self) -> str:
         return [
             "trace",
             "debug",

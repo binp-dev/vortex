@@ -7,7 +7,7 @@ from pathlib import Path
 from dataclasses import dataclass, field
 import json
 
-from dataclass_type_validator import dataclass_validate, TypeValidationError
+from dataclass_type_validator import dataclass_validate, TypeValidationError  # type: ignore
 
 import logging
 

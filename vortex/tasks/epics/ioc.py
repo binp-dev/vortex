@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Any
+from typing import List, Sequence, Any
 
 import shutil
 import re
@@ -8,13 +8,14 @@ from pathlib import Path, PurePosixPath
 from vortex.utils.path import TargetPath
 from vortex.utils.files import substitute
 from vortex.tasks.base import task, Context
+from vortex.tasks.binary import DynamicLib
 from vortex.tasks.epics.base import EpicsProject
-from vortex.tasks.epics.epics_base import AbstractEpicsBase, EpicsBaseCross, EpicsBaseHost
+from vortex.tasks.epics.epics_base import AbstractEpicsBase
 from vortex.tasks.process import run
 
 
 class AbstractIoc(EpicsProject):
-    def __init__(self, ioc_dir: Path, target_dir: TargetPath, epics_base: AbstractEpicsBase, **kws: Any):
+    def __init__(self, ioc_dir: Path, target_dir: TargetPath, epics_base: AbstractEpicsBase):
         super().__init__(ioc_dir, target_dir, epics_base.cc, deploy_path=PurePosixPath("/opt/ioc"))
         self.epics_base = epics_base
 
@@ -68,9 +69,6 @@ class AbstractIoc(EpicsProject):
 
 
 class IocHost(AbstractIoc):
-    def __init__(self, ioc_dir: Path, target_dir: TargetPath, epics_base: EpicsBaseHost):
-        super().__init__(ioc_dir, target_dir, epics_base)
-
     @task
     def run(self, ctx: Context, addr_list: List[str] = []) -> None:
         self.build(ctx)
@@ -101,10 +99,6 @@ class IocHost(AbstractIoc):
 
 
 class IocCross(AbstractIoc):
-    def __init__(self, ioc_dir: Path, target_dir: TargetPath, epics_base: EpicsBaseCross):
-        super().__init__(ioc_dir, target_dir, epics_base)
-        self.epics_deploy_path = epics_base.deploy_path
-
     def _configure(self, ctx: Context) -> None:
         super()._configure(ctx)
         substitute(
@@ -125,5 +119,39 @@ class IocCross(AbstractIoc):
             with open(env_path, "r") as f:
                 text = f.read()
             text = re.sub(r'(epicsEnvSet\("TOP",)[^\n]+', f'\\1"{self.deploy_path}")', text)
-            text = re.sub(r'(epicsEnvSet\("EPICS_BASE",)[^\n]+', f'\\1"{self.epics_deploy_path}")', text)
+            text = re.sub(r'(epicsEnvSet\("EPICS_BASE",)[^\n]+', f'\\1"{self.epics_base.deploy_path}")', text)
             ctx.device.store_mem(text, self.deploy_path / "iocBoot" / ioc_name / "envPaths")
+
+
+class IocWithLibs(AbstractIoc):
+    def __init__(
+        self,
+        ioc_dir: Path,
+        target_dir: TargetPath,
+        epics_base: AbstractEpicsBase,
+        dylibs: Sequence[DynamicLib] = [],
+    ) -> None:
+        super().__init__(ioc_dir, target_dir, epics_base)
+        self.dylibs = dylibs
+
+    def _dep_paths(self, ctx: Context) -> List[Path]:
+        return [
+            *super()._dep_paths(ctx),
+            *[ctx.target_path / l.lib_path for l in self.dylibs],
+        ]
+
+    def _store_libs(self, ctx: Context) -> None:
+        lib_dir = ctx.target_path / self.install_dir / "lib" / self.arch
+        lib_dir.mkdir(parents=True, exist_ok=True)
+        for dylib in self.dylibs:
+            shutil.copy2(
+                ctx.target_path / dylib.lib_path,
+                lib_dir / dylib.lib_file,
+            )
+
+    @task
+    def build(self, ctx: Context) -> None:
+        for dylib in self.dylibs:
+            dylib.build(ctx)
+        self._store_libs(ctx)
+        super().build(ctx)
