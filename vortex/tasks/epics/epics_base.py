@@ -8,7 +8,7 @@ from vortex.utils.path import TargetPath, prepend_if_target
 from vortex.utils.files import substitute
 from vortex.tasks.base import task, Context, Component
 from vortex.tasks.git import RepoList, RepoSource
-from vortex.tasks.compiler import Gcc
+from vortex.tasks.compiler import Gcc, HOST_GCC
 from vortex.tasks.epics.base import EpicsProject, epics_host_arch
 
 import logging
@@ -47,8 +47,6 @@ class AbstractEpicsBase(EpicsProject):
         source: EpicsSource,
         target_dir: TargetPath,
         cc: Gcc,
-        blacklist: List[str] = [],
-        whitelist: List[str] = [],
     ) -> None:
         self.source = source
         super().__init__(
@@ -108,6 +106,9 @@ class AbstractEpicsBase(EpicsProject):
 
 
 class EpicsBaseHost(AbstractEpicsBase):
+    def __init__(self, source: EpicsSource, target_dir: TargetPath) -> None:
+        super().__init__(source, target_dir, HOST_GCC)
+
     def _configure_toolchain(self, ctx: Context) -> None:
         substitute(
             [("^(\\s*CROSS_COMPILER_TARGET_ARCHS\\s*=).*$", "\\1")],

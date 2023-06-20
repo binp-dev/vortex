@@ -123,7 +123,7 @@ class IocCross(AbstractIoc):
             ctx.device.store_mem(text, self.deploy_path / "iocBoot" / ioc_name / "envPaths")
 
 
-class IocWithLibs(AbstractIoc):
+class AbstractIocWithLibs(AbstractIoc):
     def __init__(
         self,
         ioc_dir: Path,

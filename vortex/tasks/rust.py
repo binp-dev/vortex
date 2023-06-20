@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 from vortex.utils.path import TargetPath
 from vortex.utils.run import run, capture, RunMode
 from vortex.tasks.base import task, Component, Context
-from vortex.tasks.compiler import Compiler, Gcc, GccCross, GccHost, Target
+from vortex.tasks.compiler import Compiler, Gcc, Target, HOST_GCC
 from vortex.tasks.process import run as run_with_ctx
 
 import logging
@@ -45,16 +45,16 @@ class Rustc(Compiler):
 class RustcHost(Rustc):
     _target_pattern: re.Pattern[str] = re.compile(r"^Default host:\s+(\S+)$", re.MULTILINE)
 
-    def __init__(self, cc: GccHost, toolchain: Optional[str] = None):
+    def __init__(self, toolchain: Optional[str] = None):
         info = capture(["rustup", "show"])
         match = re.search(self._target_pattern, info)
         assert match is not None, f"Cannot detect rustup host rustc:\n{info}"
         target = Target.from_str(match[1])
-        super().__init__("host", target, cc, toolchain=toolchain)
+        super().__init__("host", target, HOST_GCC, toolchain=toolchain)
 
 
 class RustcCross(Rustc):
-    def __init__(self, postfix: str, target: Target, cc: GccCross, toolchain: Optional[str] = None):
+    def __init__(self, postfix: str, target: Target, cc: Gcc, toolchain: Optional[str] = None):
         super().__init__(postfix, target, cc, toolchain=toolchain)
 
     def env(self, ctx: Context) -> Dict[str, str]:

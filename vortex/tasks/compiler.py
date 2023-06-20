@@ -84,6 +84,9 @@ class GccHost(Gcc):
         return self.path / "bin" / name
 
 
+HOST_GCC = GccHost()
+
+
 class GccCross(Gcc):
     def __init__(self, name: str, target: Target, dir_name: str, archive: str, urls: List[str]):
         super().__init__(name, target)
