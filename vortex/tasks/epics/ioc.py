@@ -107,7 +107,7 @@ class IocCross(AbstractIoc):
         )
 
     def _post_deploy(self, ctx: Context) -> None:
-        assert ctx.device is not None
+        assert ctx.dst is not None
         boot_dir = ctx.target_path / self.install_dir / "iocBoot"
         for ioc_name in [path.name for path in boot_dir.iterdir()]:
             ioc_dirs = boot_dir / ioc_name
@@ -120,7 +120,7 @@ class IocCross(AbstractIoc):
                 text = f.read()
             text = re.sub(r'(epicsEnvSet\("TOP",)[^\n]+', f'\\1"{self.deploy_path}")', text)
             text = re.sub(r'(epicsEnvSet\("EPICS_BASE",)[^\n]+', f'\\1"{self.epics_base.deploy_path}")', text)
-            ctx.device.store_mem(text, self.deploy_path / "iocBoot" / ioc_name / "envPaths")
+            ctx.dst.store_mem(text, self.deploy_path / "iocBoot" / ioc_name / "envPaths")
 
 
 class AbstractIocWithLibs(AbstractIoc):

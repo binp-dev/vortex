@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 
 import argparse
 from dataclasses import dataclass
@@ -9,7 +9,9 @@ from colorama import init as colorama_init, Style
 from vortex.tasks.base import Context, Task, Component
 from vortex.utils.log import LogLevel
 from vortex.tasks.base import Runner
-from vortex.remote.ssh import SshDevice
+from vortex.dst.base import Dst
+from vortex.dst.local import Fs
+from vortex.dst.ssh import SshDevice
 
 import logging
 
@@ -73,8 +75,7 @@ def add_parser_args(parser: argparse.ArgumentParser, comp: Component) -> None:
         ),
     )
     parser.add_argument(
-        "-t",
-        "--target-dir",
+        *["-t", "--target-dir"],
         type=str,
         default=None,
         help="Path to directory to place build artifacts.",
@@ -83,6 +84,13 @@ def add_parser_args(parser: argparse.ArgumentParser, comp: Component) -> None:
         "--no-deps",
         action="store_true",
         help="Run only specified task without dependencies.",
+    )
+    parser.add_argument(
+        *["-d", "--dst"],
+        type=str,
+        metavar="<path>",
+        default=None,
+        help="Location in local file system to deploy files.",
     )
     parser.add_argument(
         "--device",
@@ -161,16 +169,20 @@ def _make_context_from_args(args: argparse.Namespace, target_dir: Path) -> Conte
     if args.target_dir is not None:
         target_dir = Path(args.target_dir).resolve()
 
-    if args.device:
-        device = SshDevice(args.device)
+    assert args.dst is None or args.device is None, "Cannot set both --dst and --device"
+    dst: Optional[Dst]
+    if args.dst:
+        dst = Fs(Path(args.dst))
+    elif args.device:
+        dst = SshDevice(args.dst)
     else:
-        device = None
+        dst = None
 
     log_level = LogLevel(args.log_level) if args.log_level is not None else LogLevel.WARNING
 
     return Context(
         target_dir,
-        device=device,
+        dst=dst,
         log_level=log_level,
         update=args.update,
         local=args.local,

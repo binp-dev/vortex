@@ -10,7 +10,7 @@ from paramiko.channel import ChannelFile
 
 from vortex.utils.run import run, RunError
 from vortex.utils.strings import quote
-from vortex.remote.base import Connection, Device
+from vortex.dst.base import Connection, Device
 
 import logging
 
@@ -56,6 +56,14 @@ class SshDevice(Device):
 
         self.user = user
 
+    def mkdir(
+        self,
+        dst: PurePosixPath,
+        exist_ok: bool = False,
+        recursive: bool = False,
+    ) -> None:
+        self.run(["mkdir", *(["-p"] if exist_ok or recursive else []), str(dst)])
+
     def store(
         self,
         src: Path,
@@ -65,7 +73,7 @@ class SshDevice(Device):
         include: List[str] = [],
     ) -> None:
         if not recursive:
-            assert len(exclude) == 0, "'exclude' is not supported"
+            assert len(exclude) == 0 and len(include) == 0, "'exclude' and 'include' are not supported in non-recursive mode"
             run(["bash", "-c", f"test -f {src} && cat {src} | ssh -p {self.port} {self.user}@{self.host} 'cat > {dst}'"])
         else:
             run(

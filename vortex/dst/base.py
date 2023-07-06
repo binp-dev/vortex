@@ -9,8 +9,16 @@ class Connection:
         raise NotImplementedError()
 
 
-class Device:
+class Dst:
     def name(self) -> str:
+        raise NotImplementedError()
+
+    def mkdir(
+        self,
+        path: PurePosixPath,
+        exist_ok: bool = False,
+        recursive: bool = False,
+    ) -> None:
         raise NotImplementedError()
 
     def store(
@@ -26,6 +34,8 @@ class Device:
     def store_mem(self, src_data: str, dst_path: PurePosixPath) -> None:
         raise NotImplementedError()
 
+
+class Device(Dst):
     def run(self, args: List[str], wait: bool = False) -> Optional[Connection]:
         raise NotImplementedError()
 

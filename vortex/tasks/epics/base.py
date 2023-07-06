@@ -112,10 +112,10 @@ class EpicsProject(Component):
         self.build(ctx)
 
         install_path = ctx.target_path / self.install_dir
-        assert ctx.device is not None
+        assert ctx.dst is not None
         self._pre_deploy(ctx)
-        logger.info(f"Deploy {install_path} to {ctx.device.name()}:{self.deploy_path}")
-        ctx.device.store(
+        logger.info(f"Deploy {install_path} to {ctx.dst.name()}:{self.deploy_path}")
+        ctx.dst.store(
             install_path,
             self.deploy_path,
             recursive=True,
