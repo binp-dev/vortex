@@ -34,9 +34,12 @@ class Output:
     def store(self, data: bytes, path: PurePosixPath) -> None:
         raise NotImplementedError()
 
+    def link(self, path: PurePosixPath, target: PurePosixPath) -> None:
+        raise NotImplementedError()
+
 
 class Device(Output):
-    def run(self, args: List[str], wait: bool = False) -> Optional[Connection]:
+    def run(self, args: List[str], wait: bool = True) -> Optional[Connection]:
         raise NotImplementedError()
 
     def reboot(self) -> None:

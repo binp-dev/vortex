@@ -8,6 +8,8 @@ from pathlib import Path
 from enum import Enum
 from time import time, sleep
 
+from vortex.utils.path import PathLike
+
 RunError = CalledProcessError
 
 import logging
@@ -22,7 +24,7 @@ class RunMode(Enum):
 
 
 def run(
-    args: Sequence[str | Path],
+    args: Sequence[str | PathLike],
     cwd: Optional[Path] = None,
     env: Mapping[str, str | Path] = {},
     *,
@@ -77,9 +79,11 @@ def run(
                 break
             if timeout is not None and timeout < time() - start:
                 raise TimeoutError
-            if input is not None:
+            if input is not None and len(input) > 0:
                 assert proc.stdin is not None
                 input = input[proc.stdin.write(input) :]
+                if len(input) == 0:
+                    proc.stdin.close()
     except:
         if capture or quiet:
             assert proc.stdout is not None

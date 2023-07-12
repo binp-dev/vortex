@@ -63,3 +63,6 @@ class Local(Output):
         logger.debug(f"{data!r}")
         with open(full_path, "wb") as f:
             f.write(data)
+
+    def link(self, path: PurePosixPath, target: PurePosixPath) -> None:
+        self._full_path(path).symlink_to(target)

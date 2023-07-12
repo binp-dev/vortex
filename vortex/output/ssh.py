@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import List, Optional, Tuple
+from typing import List, Optional
 
 import time
 from subprocess import Popen
@@ -52,7 +52,7 @@ class SshOutput(Output):
         exist_ok: bool = False,
         recursive: bool = False,
     ) -> None:
-        run([f"{' '.join(self._prefix())} mkdir -p {self._full_path(path)}"])
+        run([*self._prefix(), f"mkdir {'-p' if exist_ok or recursive else ''} {self._full_path(path)}"])
 
     def copy(
         self,
@@ -84,7 +84,10 @@ class SshOutput(Output):
     def store(self, data: bytes, path: PurePosixPath) -> None:
         logger.debug(f"Store {len(data)} bytes to {self.name()}{path}")
         logger.debug(f"{data!r}")
-        run(["bash", "-c", f"{' '.join(self._prefix())} 'cat > {self._full_path(path)}'"], input=data)
+        run([*self._prefix(), f"cat > {self._full_path(path)}"], input=data)
+
+    def link(self, path: PurePosixPath, target: PurePosixPath) -> None:
+        run([*self._prefix(), f"ln -s {target} {self._full_path(path)}"])
 
 
 class SshDevice(SshOutput, Device):
