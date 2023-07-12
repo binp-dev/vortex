@@ -7,7 +7,7 @@ from inspect import signature, Parameter
 from contextlib import contextmanager
 
 from vortex.utils.log import LogLevel
-from vortex.dst.base import Dst
+from vortex.output.base import Output
 
 from colorama import init as colorama_init, Fore, Style
 
@@ -15,7 +15,7 @@ from colorama import init as colorama_init, Fore, Style
 @dataclass
 class Context:
     target_path: Path
-    dst: Optional[Dst] = None
+    output: Optional[Output] = None
     log_level: LogLevel = LogLevel.WARNING
     update: bool = False
     local: bool = False

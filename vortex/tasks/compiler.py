@@ -135,10 +135,10 @@ class GccCross(Gcc):
 
     @task
     def deploy(self, ctx: Context) -> None:
-        assert ctx.dst is not None
+        assert ctx.output is not None
         src_path = ctx.target_path / self.path / str(self.target)
-        logger.info(f"Deploy {src_path} to {ctx.dst.name()}:{self.deploy_path}")
-        ctx.dst.store(
+        logger.info(f"Deploy {src_path} to {ctx.output.name()}:{self.deploy_path}")
+        ctx.output.copy(
             src_path,
             self.deploy_path,
             recursive=True,

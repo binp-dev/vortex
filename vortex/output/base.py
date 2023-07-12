@@ -9,7 +9,7 @@ class Connection:
         raise NotImplementedError()
 
 
-class Dst:
+class Output:
     def name(self) -> str:
         raise NotImplementedError()
 
@@ -21,7 +21,7 @@ class Dst:
     ) -> None:
         raise NotImplementedError()
 
-    def store(
+    def copy(
         self,
         local_path: Path,
         remote_path: PurePosixPath,
@@ -31,11 +31,11 @@ class Dst:
     ) -> None:
         raise NotImplementedError()
 
-    def store_mem(self, src_data: str, dst_path: PurePosixPath) -> None:
+    def store(self, data: bytes, path: PurePosixPath) -> None:
         raise NotImplementedError()
 
 
-class Device(Dst):
+class Device(Output):
     def run(self, args: List[str], wait: bool = False) -> Optional[Connection]:
         raise NotImplementedError()
 

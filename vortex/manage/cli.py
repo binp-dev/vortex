@@ -1,17 +1,18 @@
 from __future__ import annotations
 from typing import Dict, List, Tuple, Optional
 
+import re
 import argparse
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from colorama import init as colorama_init, Style
 
 from vortex.tasks.base import Context, Task, Component
 from vortex.utils.log import LogLevel
 from vortex.tasks.base import Runner
-from vortex.dst.base import Dst
-from vortex.dst.local import Fs
-from vortex.dst.ssh import SshDevice
+from vortex.output.base import Output
+from vortex.output.local import Local
+from vortex.output.ssh import SshOutput, SshDevice
 
 import logging
 
@@ -86,24 +87,17 @@ def add_parser_args(parser: argparse.ArgumentParser, comp: Component) -> None:
         help="Run only specified task without dependencies.",
     )
     parser.add_argument(
-        *["-d", "--dst"],
+        *["-o", "--output", "--device"],
         type=str,
-        metavar="<path>",
-        default=None,
-        help="Location in local file system to deploy files.",
-    )
-    parser.add_argument(
-        "--device",
-        type=str,
-        metavar="<address>[:port]",
+        metavar="[user@][host][:port][/path]",
         default=None,
         help="\n".join(
             [
-                "Device to deploy and run tests.",
-                "Requirements:",
-                "+ Debian Linux running on the device (another distros are not tested).",
-                "+ SSH server running on the device on the specified port (or 22 if the port is not specified).",
-                "+ Possibility to log in to the device via SSH by user 'root' without password (e.g. using public key).",
+                "Output location to deploy: local or remote.",
+                "Remote requires:",
+                "+ Linux with SSH server",
+                "+ Auth by public key",
+                "+ Rsync installed",
             ]
         ),
     )
@@ -118,8 +112,7 @@ def add_parser_args(parser: argparse.ArgumentParser, comp: Component) -> None:
         help="Store cache locally (for rustup, cargo, etc.).",
     )
     parser.add_argument(
-        "-j",
-        "--jobs",
+        *["-j", "--jobs"],
         type=int,
         metavar="<N>",
         default=None,
@@ -169,20 +162,31 @@ def _make_context_from_args(args: argparse.Namespace, target_dir: Path) -> Conte
     if args.target_dir is not None:
         target_dir = Path(args.target_dir).resolve()
 
-    assert args.dst is None or args.device is None, "Cannot set both --dst and --device"
-    dst: Optional[Dst]
-    if args.dst:
-        dst = Fs(Path(args.dst))
-    elif args.device:
-        dst = SshDevice(args.dst)
-    else:
-        dst = None
+    output: Optional[Output] = None
+    if args.output is not None:
+        match = re.match(r"^(\w+@)?([\w.-]+)?(:\d+)?(/.+)?$", args.output)
+        assert match is not None, f"Wrong output format: '{args.output}'"
+        user = match[1][:-1] if match[1] is not None else None
+        host = match[2]
+        port = int(match[3][1:]) if match[3] is not None else None
+        path = match[4]
+        print(f"Output parsed: {user=}, {host=}, {port=}, {path=}")
+        if host is None or host == "." or host == "..":
+            print("Output selected: local FS")
+            assert user is None and port is None, "User and port are not supported for local output"
+            output = Local(Path((host or "") + path))
+        elif path is None:
+            print("Output selected: SSH device")
+            output = SshDevice(host, port=port, user=user)
+        else:
+            print("Output selected: SSH FS")
+            output = SshOutput(host, PurePosixPath(path), port=port, user=user)
 
     log_level = LogLevel(args.log_level) if args.log_level is not None else LogLevel.WARNING
 
     return Context(
         target_dir,
-        dst=dst,
+        output=output,
         log_level=log_level,
         update=args.update,
         local=args.local,

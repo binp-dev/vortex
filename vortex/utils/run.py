@@ -26,6 +26,7 @@ def run(
     cwd: Optional[Path] = None,
     env: Mapping[str, str | Path] = {},
     *,
+    input: Optional[bytes] = None,
     capture: bool = False,
     quiet: bool = False,
     timeout: Optional[float] = None,
@@ -42,6 +43,10 @@ def run(
 
     x_env = {**dict(os.environ), **{k: str(v) for k, v in env.items()}}
 
+    stdin = None
+    if input is not None:
+        stdin = PIPE
+
     stdout = None
     if capture or quiet:
         stdout = PIPE
@@ -55,6 +60,7 @@ def run(
         x_args,
         cwd=cwd,
         env=x_env,
+        stdin=stdin,
         stdout=stdout,
         stderr=stderr,
     )
@@ -71,6 +77,9 @@ def run(
                 break
             if timeout is not None and timeout < time() - start:
                 raise TimeoutError
+            if input is not None:
+                assert proc.stdin is not None
+                input = input[proc.stdin.write(input) :]
     except:
         if capture or quiet:
             assert proc.stdout is not None
