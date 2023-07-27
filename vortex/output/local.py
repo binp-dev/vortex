@@ -65,4 +65,6 @@ class Local(Output):
             f.write(data)
 
     def link(self, path: PurePosixPath, target: PurePosixPath) -> None:
-        self._full_path(path).symlink_to(target)
+        full_path = self._full_path(path)
+        full_path.unlink()
+        full_path.symlink_to(target)
