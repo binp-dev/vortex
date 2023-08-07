@@ -87,7 +87,7 @@ class SshOutput(Output):
         run([*self._prefix(), f"cat > {self._full_path(path)}"], input=data)
 
     def link(self, path: PurePosixPath, target: PurePosixPath) -> None:
-        run([*self._prefix(), f"ln -s {target} {self._full_path(path)}"])
+        run([*self._prefix(), f"ln -sf {target} {self._full_path(path)}"])
 
 
 class SshDevice(SshOutput, Device):
